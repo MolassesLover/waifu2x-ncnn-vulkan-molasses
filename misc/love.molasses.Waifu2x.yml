@@ -1,0 +1,17 @@
+app-id: love.molasses.Waifu2x
+runtime: org.freedesktop.Platform
+runtime-version: '22.08'
+sdk: org.freedesktop.Sdk
+command: waifu2x-ncnn-vulkan
+finish-args:
+  - "--socket=x11"
+  - "--socket=pulseaudio"
+  - "--device=all"
+  - "--share=network"
+modules:
+  - name: waifu2x-ncnn-vulkan
+    buildsystem: cmake-ninja
+    builddir: true
+    sources:
+      - type: git
+        url: https://github.com/MolassesLover/waifu2x-ncnn-vulkan-molasses.git
