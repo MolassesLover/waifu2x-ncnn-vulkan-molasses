@@ -18,14 +18,32 @@ find_package(Threads)
 find_package(OpenMP)
 find_package(Vulkan REQUIRED)
 
+SET(MAIN
+    src/main.cpp
+)
+
+set(HEADER_FILES
+    include/filesystem_utils.h
+    include/stb_image_write.h
+    include/stb_image.h
+    include/waifu2x.h
+    include/webp_image.h
+    include/wic_image.h
+    include/win32dirent.h
+)
+
+set(SOURCE_FILES
+    src/waifu2x.cpp
+)
+
 macro(waifu2x_add_shader SHADER_SRC)
     get_filename_component(SHADER_SRC_NAME_WE ${SHADER_SRC} NAME_WE)
     set(SHADER_COMP_HEADER ${CMAKE_CURRENT_BINARY_DIR}/${SHADER_SRC_NAME_WE}.comp.hex.h)
 
     add_custom_command(
         OUTPUT ${SHADER_COMP_HEADER}
-        COMMAND ${CMAKE_COMMAND} -DSHADER_SRC=${CMAKE_CURRENT_SOURCE_DIR}/${SHADER_SRC} -DSHADER_COMP_HEADER=${SHADER_COMP_HEADER} -P "${CMAKE_CURRENT_SOURCE_DIR}/generate_shader_comp_header.cmake"
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${SHADER_SRC}
+        COMMAND ${CMAKE_COMMAND} -DSHADER_SRC=${CMAKE_CURRENT_SOURCE_DIR}/src/${SHADER_SRC} -DSHADER_COMP_HEADER=${SHADER_COMP_HEADER} -P "${CMAKE_CURRENT_SOURCE_DIR}/src/generate_shader_comp_header.cmake"
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/${SHADER_SRC}
         COMMENT "Preprocessing shader source ${SHADER_SRC_NAME_WE}.comp"
         VERBATIM
     )
@@ -89,7 +107,7 @@ endif()
 
 if(NOT USE_SYSTEM_NCNN)
     # build ncnn library
-    if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ncnn/CMakeLists.txt")
+    if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/libs/ncnn/CMakeLists.txt")
         message(FATAL_ERROR "The submodules were not downloaded! Please update submodules with \"git submodule update --init --recursive\" and try again.")
     endif()
 
@@ -202,11 +220,11 @@ if(NOT USE_SYSTEM_NCNN)
     option(WITH_LAYER_einsum "" OFF)
     option(WITH_LAYER_deformableconv2d "" OFF)
 
-    add_subdirectory(ncnn)
+    add_subdirectory(libs/ncnn)
 endif()
 
 if(USE_SYSTEM_WEBP)
-    set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
+    set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/src")
     find_package(WebP)
     if(NOT TARGET webp)
         message(WARNING "webp target not found! USE_SYSTEM_WEBP will be turned off.")
@@ -216,7 +234,7 @@ endif()
 
 if(NOT USE_SYSTEM_WEBP)
     # build libwebp library
-    if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/libwebp/CMakeLists.txt")
+    if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/libs/libwebp/CMakeLists.txt")
         message(FATAL_ERROR "The submodules were not downloaded! Please update submodules with \"git submodule update --init --recursive\" and try again.")
     endif()
 
@@ -234,9 +252,9 @@ if(NOT USE_SYSTEM_WEBP)
     option(WEBP_NEAR_LOSSLESS "" OFF)
     option(WEBP_ENABLE_SWAP_16BIT_CSP "" OFF)
 
-    add_subdirectory(libwebp)
+    add_subdirectory(libs/libwebp)
 
-    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/libwebp/src)
+    include_directories(libs/libwebp/src)
 endif()
 
 waifu2x_add_shader(waifu2x_preproc.comp)
@@ -246,7 +264,9 @@ waifu2x_add_shader(waifu2x_postproc_tta.comp)
 
 add_custom_target(generate-spirv DEPENDS ${SHADER_SPV_HEX_FILES})
 
-add_executable(waifu2x-ncnn-vulkan main.cpp waifu2x.cpp)
+add_executable(waifu2x-ncnn-vulkan ${MAIN} ${SOURCE_FILES} ${HEADER_FILES})
+
+target_include_directories(waifu2x-ncnn-vulkan PUBLIC include)
 
 add_dependencies(waifu2x-ncnn-vulkan generate-spirv)
 
@@ -275,3 +295,6 @@ if(USE_STATIC_MOLTENVK)
 endif()
 
 target_link_libraries(waifu2x-ncnn-vulkan ${WAIFU2X_LINK_LIBRARIES})
+
+install(TARGETS waifu2x-ncnn-vulkan DESTINATION bin)
+install(FILES ${HEADER_FILES} DESTINATION include/waifu2x-ncnn-vulkan)

@@ -4,8 +4,8 @@
 // webp image decoder and encoder with libwebp
 #include <stdio.h>
 #include <stdlib.h>
-#include "webp/decode.h"
-#include "webp/encode.h"
+#include <webp/decode.h>
+#include <webp/encode.h>
 
 unsigned char* webp_load(const unsigned char* buffer, int len, int* w, int* h, int* c)
 {
